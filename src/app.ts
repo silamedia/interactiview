@@ -1,4 +1,5 @@
 import './styles.css';
+import './widget.css';
 import { clear, el, field } from './dom';
 import {
   InterviewData,
@@ -67,9 +68,9 @@ function renderCommonFields(): HTMLElement {
   );
 
   section.append(
-    field('Заголовок', title),
-    field('URL обложки', poster, 'Необязательно. Если обложки нет, будет показано первое видео.'),
-    field('Лид / описание', description),
+    field('Заголовок', title, 'Показывается над интерактивью. Можно оставить пустым.'),
+    field('URL обложки', poster, 'Если не указать, до клика будет показано первое видео.'),
+    field('Лид / описание', description, 'Короткое объяснение для читателя. Можно оставить пустым.'),
     renderLayoutChoice()
   );
 
@@ -79,6 +80,7 @@ function renderCommonFields(): HTMLElement {
 function renderLayoutChoice(): HTMLElement {
   const wrapper = el('fieldset', { className: 'layout-choice' });
   wrapper.append(el('legend', { text: 'Верстка embed' }));
+  wrapper.append(el('p', { className: 'field__note', text: 'Выберите, как интерактивью будет выглядеть на сайте.' }));
   wrapper.append(
     radio('layout', 'stacked', data.layout, 'Видео сверху, вопросы снизу', (value) =>
       update({ layout: value })
@@ -140,8 +142,16 @@ function renderQuestion(item: InterviewItem, index: number): HTMLElement {
 
   const times = el('div', { className: 'time-grid' });
   times.append(
-    field('Начало', input(item.start, '01:18', (value) => updateItem(index, { start: value }))),
-    field('Конец', input(item.end, '02:05', (value) => updateItem(index, { end: value })))
+    field(
+      'Начало',
+      input(item.start, '01:18', (value) => updateItem(index, { start: value })),
+      'Момент, с которого начинается ответ, например 01:18.'
+    ),
+    field(
+      'Конец',
+      input(item.end, '02:05', (value) => updateItem(index, { end: value })),
+      'Видео остановится на этой отметке.'
+    )
   );
 
   const validation = renderValidation(item);
@@ -150,19 +160,21 @@ function renderQuestion(item: InterviewItem, index: number): HTMLElement {
     header,
     field(
       'Вопрос',
-      input(item.question, 'Что вы думаете о...', (value) => updateItem(index, { question: value }))
+      input(item.question, 'Что вы думаете о...', (value) => updateItem(index, { question: value })),
+      'Текст, на который читатель будет кликать.'
     ),
     field(
       'YouTube URL',
       input(item.youtubeUrl, 'https://www.youtube.com/watch?v=...', (value) =>
         updateItem(index, { youtubeUrl: value })
-      )
+      ),
+      'Ссылка на ролик, из которого берется видеоответ.'
     ),
     times,
     field(
       'Источник',
       input(item.source, 'Название ролика / канал', (value) => updateItem(index, { source: value })),
-      'Необязательно, но полезно для указания источника.'
+      'Название ролика или канала. Можно оставить пустым.'
     ),
     validation
   );

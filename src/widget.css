@@ -59,11 +59,21 @@
   z-index: 1;
 }
 
+.sfi__questions-panel {
+  min-width: 0;
+}
+
+.sfi__help {
+  margin: 0 0 8px;
+  opacity: 0.65;
+  font-size: 0.875em;
+}
+
 .sfi__questions {
   display: grid;
   gap: 0;
   margin: 0;
-  padding: 12px 0 0;
+  padding: 0;
   list-style: none;
 }
 

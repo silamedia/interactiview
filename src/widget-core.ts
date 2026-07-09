@@ -56,6 +56,7 @@ export function renderWidget(container: HTMLElement, rawData: InterviewData, _op
   const layout = el('div', { className: 'sfi__layout' });
   const media = el('div', { className: 'sfi__media' });
   const playerMount = el('div', { className: 'sfi__player' });
+  const questions = el('div', { className: 'sfi__questions-panel' });
   const list = el('ul', { className: 'sfi__questions' });
 
   let player: YouTubePlayer | null = null;
@@ -118,9 +119,12 @@ export function renderWidget(container: HTMLElement, rawData: InterviewData, _op
 
   if (!data.items.length) {
     list.append(el('li', { className: 'sfi__empty', text: 'Нет валидных фрагментов для показа.' }));
+  } else {
+    questions.append(el('p', { className: 'sfi__help', text: 'Кликните на вопрос, чтобы увидеть видеоответ.' }));
   }
 
-  layout.append(media, list);
+  questions.append(list);
+  layout.append(media, questions);
   container.append(title);
 
   if (data.description) {
