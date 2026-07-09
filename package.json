@@ -1,0 +1,28 @@
+{
+  "name": "sila-fragment-interview",
+  "version": "2.0.0",
+  "description": "Silamedia Interactiview: embeddable interview builder from timestamped YouTube fragments",
+  "type": "module",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sleptor/silainterview.git"
+  },
+  "author": "Silamedia",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sleptor/silainterview/issues"
+  },
+  "homepage": "https://github.com/sleptor/silainterview#readme",
+  "dependencies": {
+    "typescript": "^5.9.2",
+    "vite": "^7.0.4"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "npm run build:app && npm run build:widget",
+    "build:app": "tsc --noEmit && vite build --config vite.app.config.ts",
+    "build:widget": "vite build --config vite.widget.config.ts",
+    "preview": "vite preview --host 127.0.0.1"
+  }
+}
