@@ -3,6 +3,7 @@ import { clear, el, field } from './dom';
 import {
   InterviewData,
   InterviewItem,
+  InterviewLayout,
   defaultInterview,
   encodeInterview,
   formatTimestamp,
@@ -38,7 +39,7 @@ function renderApp(): void {
   const headerCopy = header.querySelector('.header-copy');
   headerCopy?.append(
     el('h1', { text: 'Silamedia Interactiview' }),
-    el('p', { text: 'Конструктор embed-интервью из фрагментов YouTube-роликов.' })
+    el('p', { text: 'Русская версия конструктора embed-интервью из фрагментов YouTube.' })
   );
 
   const grid = el('div', { className: 'builder-grid' });
@@ -46,7 +47,7 @@ function renderApp(): void {
   editor.append(renderCommonFields(), renderQuestions(), renderEmbedCode());
 
   const preview = el('section', { className: 'preview-panel' });
-  preview.append(el('h2', { text: 'Preview' }));
+  preview.append(el('h2', { text: 'Предпросмотр' }));
 
   previewMount = el('div');
   preview.append(previewMount);
@@ -58,24 +59,39 @@ function renderApp(): void {
 }
 
 function renderCommonFields(): HTMLElement {
-  const section = panel('Common');
-  const title = input(data.title, 'Headline', (value) => update({ title: value }));
-  const poster = input(data.poster, 'Cover picture URL', (value) => update({ poster: value }));
-  const description = textarea(data.description, 'Lead/Description', (value) =>
+  const section = panel('Общее');
+  const title = input(data.title, 'Заголовок', (value) => update({ title: value }));
+  const poster = input(data.poster, 'URL обложки', (value) => update({ poster: value }));
+  const description = textarea(data.description, 'Лид / описание', (value) =>
     update({ description: value })
   );
 
   section.append(
-    field('Headline', title),
-    field('Cover picture URL', poster, 'Optional. Used before the first question is played.'),
-    field('Lead/Description', description)
+    field('Заголовок', title),
+    field('URL обложки', poster, 'Необязательно. Если обложки нет, будет показано первое видео.'),
+    field('Лид / описание', description),
+    renderLayoutChoice()
   );
 
   return section;
 }
 
+function renderLayoutChoice(): HTMLElement {
+  const wrapper = el('fieldset', { className: 'layout-choice' });
+  wrapper.append(el('legend', { text: 'Верстка embed' }));
+  wrapper.append(
+    radio('layout', 'stacked', data.layout, 'Видео сверху, вопросы снизу', (value) =>
+      update({ layout: value })
+    ),
+    radio('layout', 'side', data.layout, 'Видео слева, вопросы справа', (value) =>
+      update({ layout: value })
+    )
+  );
+  return wrapper;
+}
+
 function renderQuestions(): HTMLElement {
-  const section = panel('Questions');
+  const section = panel('Вопросы');
   const list = el('div', { className: 'questions-list' });
 
   data.items.forEach((item, index) => {
@@ -83,7 +99,7 @@ function renderQuestions(): HTMLElement {
   });
 
   const actions = el('div', { className: 'row-actions' });
-  const addButton = button('Add question', 'primary', () => {
+  const addButton = button('Добавить вопрос', 'primary', () => {
     data = {
       ...data,
       items: [
@@ -111,21 +127,21 @@ function renderQuestion(item: InterviewItem, index: number): HTMLElement {
   const card = el('article', { className: 'question-card' });
   const header = el('div', { className: 'question-card__header' });
   header.append(
-    el('strong', { text: `Question ${index + 1}` }),
+    el('strong', { text: `Вопрос ${index + 1}` }),
     el('div', { className: 'question-card__tools' })
   );
 
   const tools = header.querySelector('.question-card__tools');
   tools?.append(
-    iconButton('Up', 'up', () => moveItem(index, -1), index === 0),
-    iconButton('Down', 'down', () => moveItem(index, 1), index === data.items.length - 1),
-    iconButton('Remove', 'remove', () => removeItem(index), data.items.length === 1)
+    iconButton('Выше', 'up', () => moveItem(index, -1), index === 0),
+    iconButton('Ниже', 'down', () => moveItem(index, 1), index === data.items.length - 1),
+    iconButton('Удалить', 'remove', () => removeItem(index), data.items.length === 1)
   );
 
   const times = el('div', { className: 'time-grid' });
   times.append(
-    field('Start', input(item.start, '01:18', (value) => updateItem(index, { start: value }))),
-    field('End', input(item.end, '02:05', (value) => updateItem(index, { end: value })))
+    field('Начало', input(item.start, '01:18', (value) => updateItem(index, { start: value }))),
+    field('Конец', input(item.end, '02:05', (value) => updateItem(index, { end: value })))
   );
 
   const validation = renderValidation(item);
@@ -133,7 +149,7 @@ function renderQuestion(item: InterviewItem, index: number): HTMLElement {
   card.append(
     header,
     field(
-      'Question',
+      'Вопрос',
       input(item.question, 'Что вы думаете о...', (value) => updateItem(index, { question: value }))
     ),
     field(
@@ -144,9 +160,9 @@ function renderQuestion(item: InterviewItem, index: number): HTMLElement {
     ),
     times,
     field(
-      'Source label',
+      'Источник',
       input(item.source, 'Название ролика / канал', (value) => updateItem(index, { source: value })),
-      'Optional but useful for attribution.'
+      'Необязательно, но полезно для указания источника.'
     ),
     validation
   );
@@ -159,26 +175,26 @@ function renderValidation(item: InterviewItem): HTMLElement {
   const end = parseTimestamp(item.end);
 
   if (start === null && !item.start && end === null && !item.end) {
-    return el('p', { className: 'validation-note', text: 'Time format: 01:18, 1:02:05, 78, 1m18s.' });
+    return el('p', { className: 'validation-note', text: 'Формат времени: 01:18, 1:02:05, 78, 1m18s.' });
   }
 
   if (start === null || end === null) {
-    return el('p', { className: 'validation-note validation-note--error', text: 'Start and end must be valid timestamps.' });
+    return el('p', { className: 'validation-note validation-note--error', text: 'Начало и конец должны быть валидными таймкодами.' });
   }
 
   if (end <= start) {
-    return el('p', { className: 'validation-note validation-note--error', text: 'End must be later than start.' });
+    return el('p', { className: 'validation-note validation-note--error', text: 'Конец должен быть позже начала.' });
   }
 
   return el('p', {
     className: 'validation-note validation-note--ok',
-    text: `Fragment: ${formatTimestamp(start)} - ${formatTimestamp(end)}`
+    text: `Фрагмент: ${formatTimestamp(start)} - ${formatTimestamp(end)}`
   });
 }
 
 function renderEmbedCode(): HTMLElement {
   const normalized = normalizeInterview(data);
-  const section = panel('Embed');
+  const section = panel('Embed-код');
   const code = buildEmbedCode(data);
   embedStatus = el('p', {
     className: normalized.items.length ? 'validation-note validation-note--ok' : 'validation-note validation-note--error',
@@ -192,11 +208,11 @@ function renderEmbedCode(): HTMLElement {
   embedOutput = output;
   output.textContent = code;
 
-  const copy = button('Copy embed code', 'primary', async () => {
+  const copy = button('Скопировать embed-код', 'primary', async () => {
     await navigator.clipboard.writeText(buildEmbedCode(data));
-    copy.textContent = 'Copied';
+    copy.textContent = 'Скопировано';
     window.setTimeout(() => {
-      copy.textContent = 'Copy embed code';
+      copy.textContent = 'Скопировать embed-код';
     }, 1200);
   });
 
@@ -213,15 +229,15 @@ function renderEmbedCode(): HTMLElement {
 
 function embedStatusText(playableCount: number): string {
   return playableCount
-    ? `${playableCount} playable fragment${playableCount === 1 ? '' : 's'} in embed.`
-    : 'Add at least one valid YouTube URL with start and end timestamps.';
+    ? `В embed попадет фрагментов: ${playableCount}.`
+    : 'Добавьте хотя бы один валидный YouTube URL с началом и концом фрагмента.';
 }
 
 function buildEmbedCode(interview: InterviewData): string {
   const encoded = encodeInterview(interview);
 
   return `<div class="sila-fragment-interview" data-interview="${encoded}"></div>
-<script async src="https://silamedia.github.io/interactiview/sila-fragment-interview.js"></script>`;
+<script async src="https://silamedia.github.io/interactiview-ru/sila-fragment-interview.js"></script>`;
 }
 
 function panel(title: string): HTMLElement {
@@ -253,6 +269,27 @@ function textarea(value: string, placeholder: string, onInput: (value: string) =
   node.value = value;
   node.addEventListener('input', () => onInput(node.value));
   return node;
+}
+
+function radio(
+  name: string,
+  value: InterviewLayout,
+  currentValue: InterviewLayout,
+  label: string,
+  onChange: (value: InterviewLayout) => void
+): HTMLLabelElement {
+  const wrapper = el('label', { className: 'radio-card' });
+  const inputNode = el('input', {
+    attrs: {
+      type: 'radio',
+      name,
+      value
+    }
+  });
+  inputNode.checked = value === currentValue;
+  inputNode.addEventListener('change', () => onChange(value));
+  wrapper.append(inputNode, el('span', { text: label }));
+  return wrapper;
 }
 
 function button(label: string, tone: 'primary' | 'neutral', onClick: () => void): HTMLButtonElement {

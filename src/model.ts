@@ -7,10 +7,13 @@ export type InterviewItem = {
   source: string;
 };
 
+export type InterviewLayout = 'stacked' | 'side';
+
 export type InterviewData = {
   title: string;
   description: string;
   poster: string;
+  layout: InterviewLayout;
   items: InterviewItem[];
 };
 
@@ -29,6 +32,7 @@ export const defaultInterview: InterviewData = {
   description:
     'Соберите интервью из ответов, уже опубликованных на YouTube: разные каналы, разные ролики, один связный материал.',
   poster: '',
+  layout: 'stacked',
   items: [
     {
       id: crypto.randomUUID(),
@@ -129,6 +133,7 @@ export function normalizeInterview(data: InterviewData): NormalizedInterview {
     title: data.title.trim(),
     description: data.description.trim(),
     poster: data.poster.trim(),
+    layout: data.layout === 'side' ? 'side' : 'stacked',
     items
   };
 }
@@ -143,7 +148,15 @@ export function decodeInterview(encoded: string | null): InterviewData | null {
   }
 
   try {
-    return JSON.parse(decodeURIComponent(encoded)) as InterviewData;
+    const decoded = JSON.parse(decodeURIComponent(encoded)) as Partial<InterviewData>;
+
+    return {
+      title: decoded.title || '',
+      description: decoded.description || '',
+      poster: decoded.poster || '',
+      layout: decoded.layout === 'side' ? 'side' : 'stacked',
+      items: decoded.items || []
+    };
   } catch {
     return null;
   }

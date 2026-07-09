@@ -1,13 +1,14 @@
-# Silamedia Interactiview
+# Silamedia Interactiview RU
 
-Modern embed builder for assembling interviews from timestamped fragments of already published YouTube videos.
+Русская версия embed-конструктора для интервью из фрагментов уже опубликованных YouTube-роликов.
 
 ## What it does
 
-- Builds a structured interview from YouTube URLs hosted by any public channel.
-- Lets an editor define each answer fragment with a start and end timestamp.
-- Generates a copy-paste embed snippet for a website.
-- Plays each selected fragment through the YouTube IFrame Player API and pauses at the configured end timestamp.
+- собирает интервью из YouTube URL разных каналов;
+- задает начало и конец каждого ответа;
+- дает выбрать верстку embed: видео сверху или видео слева;
+- генерирует код вставки на сайт;
+- проигрывает выбранный фрагмент и останавливает видео на заданном конце.
 
 ## Development
 

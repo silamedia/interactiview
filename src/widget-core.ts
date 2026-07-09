@@ -48,14 +48,15 @@ export function renderWidget(container: HTMLElement, rawData: InterviewData, _op
   const data = normalizeInterview(rawData);
   clear(container);
   container.classList.add('sfi');
+  container.classList.toggle('sfi--side', data.layout === 'side');
+  container.classList.toggle('sfi--stacked', data.layout !== 'side');
 
   const title = el('h2', { className: 'sfi__title', text: data.title || 'Interview' });
   const description = el('p', { className: 'sfi__description', text: data.description });
   const layout = el('div', { className: 'sfi__layout' });
   const media = el('div', { className: 'sfi__media' });
   const playerMount = el('div', { className: 'sfi__player' });
-  const list = el('ol', { className: 'sfi__questions' });
-  const status = el('p', { className: 'sfi__status', text: 'Выберите вопрос.' });
+  const list = el('ul', { className: 'sfi__questions' });
 
   let player: YouTubePlayer | null = null;
   let activeItem: NormalizedItem | null = null;
@@ -72,16 +73,17 @@ export function renderWidget(container: HTMLElement, rawData: InterviewData, _op
     media.append(poster);
   }
 
-  media.append(playerMount, status);
+  media.append(playerMount);
 
-  data.items.forEach((item, index) => {
+  if (!data.poster && data.items[0]) {
+    cueInitialVideo(data.items[0]);
+  }
+
+  data.items.forEach((item) => {
     const row = el('li', { className: 'sfi__question' });
     const action = el('button', { className: 'sfi__question-button' });
     action.type = 'button';
-    action.append(
-      el('span', { className: 'sfi__question-index', text: String(index + 1).padStart(2, '0') }),
-      el('span', { className: 'sfi__question-text', text: item.question || 'Untitled question' })
-    );
+    action.append(el('span', { className: 'sfi__question-text', text: item.question || 'Вопрос' }));
 
     if (item.source) {
       action.append(el('span', { className: 'sfi__source', text: item.source }));
@@ -90,40 +92,16 @@ export function renderWidget(container: HTMLElement, rawData: InterviewData, _op
     action.addEventListener('click', async () => {
       activeItem = item;
       setActiveQuestion(list, row);
-      status.textContent = 'Загрузка фрагмента...';
       const yt = await loadYouTubeApi();
 
       if (!player) {
-        player = new yt.Player(playerMount, {
-          width: '100%',
-          height: '100%',
+        player = createPlayer(yt, playerMount, item, () => player, () => activeItem, () => stopTimer, (next) => {
+          stopTimer = next;
+        });
+        player.loadVideoById({
           videoId: item.videoId,
-          playerVars: {
-            autoplay: 1,
-            controls: 1,
-            rel: 0,
-            modestbranding: 1,
-            playsinline: 1,
-            start: item.startSeconds,
-            end: item.endSeconds
-          },
-          events: {
-            onReady: () => {
-              player?.loadVideoById({
-                videoId: item.videoId,
-                startSeconds: item.startSeconds,
-                endSeconds: item.endSeconds
-              });
-              player?.playVideo();
-            },
-            onStateChange: (event) => {
-              if (event.data === yt.PlayerState.PLAYING) {
-                startEndWatcher(() => player, () => activeItem, status, stopTimer, (next) => {
-                  stopTimer = next;
-                });
-              }
-            }
-          }
+          startSeconds: item.startSeconds,
+          endSeconds: item.endSeconds
         });
       } else {
         player.loadVideoById({
@@ -132,8 +110,6 @@ export function renderWidget(container: HTMLElement, rawData: InterviewData, _op
           endSeconds: item.endSeconds
         });
       }
-
-      status.textContent = `${item.question} (${formatRange(item)})`;
     });
 
     row.append(action);
@@ -152,6 +128,19 @@ export function renderWidget(container: HTMLElement, rawData: InterviewData, _op
   }
 
   container.append(layout, branding());
+
+  async function cueInitialVideo(item: NormalizedItem): Promise<void> {
+    const yt = await loadYouTubeApi();
+
+    if (player) {
+      return;
+    }
+
+    activeItem = item;
+    player = createPlayer(yt, playerMount, item, () => player, () => activeItem, () => stopTimer, (next) => {
+      stopTimer = next;
+    });
+  }
 }
 
 function setActiveQuestion(list: HTMLElement, activeRow: HTMLElement): void {
@@ -163,7 +152,6 @@ function setActiveQuestion(list: HTMLElement, activeRow: HTMLElement): void {
 function startEndWatcher(
   getPlayer: () => YouTubePlayer | null,
   getItem: () => NormalizedItem | null,
-  status: HTMLElement,
   currentTimer: number | null,
   setTimer: (timer: number | null) => void
 ): void {
@@ -181,13 +169,51 @@ function startEndWatcher(
 
     if (player.getCurrentTime() >= item.endSeconds) {
       player.pauseVideo();
-      status.textContent = `Фрагмент завершен: ${formatRange(item)}`;
       window.clearInterval(timer);
       setTimer(null);
     }
   }, 200);
 
   setTimer(timer);
+}
+
+function createPlayer(
+  yt: YouTubeNamespace,
+  playerMount: HTMLElement,
+  item: NormalizedItem,
+  getPlayer: () => YouTubePlayer | null,
+  getActiveItem: () => NormalizedItem | null,
+  getStopTimer: () => number | null,
+  setStopTimer: (timer: number | null) => void
+): YouTubePlayer {
+  return new yt.Player(playerMount, {
+    width: '100%',
+    height: '100%',
+    videoId: item.videoId,
+    playerVars: {
+      autoplay: 0,
+      controls: 1,
+      rel: 0,
+      modestbranding: 1,
+      playsinline: 1,
+      start: item.startSeconds,
+      end: item.endSeconds
+    },
+    events: {
+      onReady: () => {
+        getPlayer()?.cueVideoById({
+          videoId: item.videoId,
+          startSeconds: item.startSeconds,
+          endSeconds: item.endSeconds
+        });
+      },
+      onStateChange: (event) => {
+        if (event.data === yt.PlayerState.PLAYING) {
+          startEndWatcher(getPlayer, getActiveItem, getStopTimer(), setStopTimer);
+        }
+      }
+    }
+  });
 }
 
 function loadYouTubeApi(): Promise<YouTubeNamespace> {
@@ -212,10 +238,6 @@ function loadYouTubeApi(): Promise<YouTubeNamespace> {
   });
 
   return apiPromise;
-}
-
-function formatRange(item: NormalizedItem): string {
-  return `${item.start} - ${item.end}`;
 }
 
 function branding(): HTMLElement {
