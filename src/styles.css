@@ -240,6 +240,18 @@ textarea {
   gap: 6px;
 }
 
+.question-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.question-card__footer .validation-note {
+  margin: 0;
+}
+
 .time-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

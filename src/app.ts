@@ -26,6 +26,8 @@ type AppMode = 'create' | 'edit';
 let data: InterviewData = structuredClone(defaultInterview);
 let mode: AppMode = 'create';
 let importStatus = '';
+let itemDrafts: Record<string, InterviewItem> = {};
+let itemSaveStatus: Record<string, string> = {};
 let previewMount: HTMLElement | null = null;
 let embedOutput: HTMLTextAreaElement | null = null;
 let embedStatus: HTMLElement | null = null;
@@ -113,6 +115,8 @@ function renderImportPanel(): HTMLElement {
     }
 
     data = withStableIds(parsed);
+    itemDrafts = {};
+    itemSaveStatus = {};
     importStatus = 'Готово: интерактивью открыто в редакторе ниже.';
     renderApp();
   });
@@ -220,6 +224,7 @@ function renderQuestions(): HTMLElement {
 }
 
 function renderQuestion(item: InterviewItem, index: number): HTMLElement {
+  const draft = itemDrafts[item.id] || item;
   const card = el('article', { className: 'question-card' });
   const header = el('div', { className: 'question-card__header' });
   header.append(
@@ -234,43 +239,56 @@ function renderQuestion(item: InterviewItem, index: number): HTMLElement {
     iconButton('Удалить', 'remove', () => removeItem(index), data.items.length === 1)
   );
 
+  const status = el('p', {
+    className: itemSaveStatus[item.id] === 'Сохранено'
+      ? 'validation-note validation-note--ok'
+      : 'validation-note',
+    text: itemSaveStatus[item.id] || ''
+  });
+  const save = button('Сохранить вопрос', 'primary', () => saveItemDraft(item.id));
+  save.disabled = !itemDrafts[item.id];
+  const changeDraft = (patch: Partial<InterviewItem>) => updateItemDraft(item.id, patch, status, save);
+
   const times = el('div', { className: 'time-grid' });
   times.append(
     field(
       'Начало',
-      input(item.start, '01:18', (value) => updateItem(index, { start: value })),
+      input(draft.start, '01:18', (value) => changeDraft({ start: value })),
       'Момент, с которого начинается ответ, например 01:18.'
     ),
     field(
       'Конец',
-      input(item.end, '02:05', (value) => updateItem(index, { end: value })),
+      input(draft.end, '02:05', (value) => changeDraft({ end: value })),
       'Видео остановится на этой отметке.'
     )
   );
 
-  const validation = renderValidation(item);
+  const validation = renderValidation(draft);
+  const footer = el('div', { className: 'question-card__footer' });
+  footer.append(status, save);
 
   card.append(
     header,
     field(
       'Вопрос',
-      input(item.question, 'Что вы думаете о...', (value) => updateItem(index, { question: value })),
+      input(draft.question, 'Что вы думаете о...', (value) => changeDraft({ question: value })),
       'Текст, на который читатель будет кликать.'
     ),
     field(
       'YouTube URL',
-      input(item.youtubeUrl, 'https://www.youtube.com/watch?v=...', (value) =>
-        updateItem(index, { youtubeUrl: value })
+      input(draft.youtubeUrl, 'https://www.youtube.com/watch?v=...', (value) =>
+        changeDraft({ youtubeUrl: value })
       ),
       'Ссылка на ролик, из которого берется видеоответ.'
     ),
     times,
     field(
       'Источник',
-      input(item.source, 'Название ролика / канал', (value) => updateItem(index, { source: value })),
+      input(draft.source, 'Название ролика / канал', (value) => changeDraft({ source: value })),
       'Название ролика или канала. Можно оставить пустым.'
     ),
-    validation
+    validation,
+    footer
   );
 
   return card;
@@ -409,7 +427,7 @@ function iconButton(label: string, icon: string, onClick: () => void, disabled: 
   const symbols: Record<string, string> = {
     up: '↑',
     down: '↓',
-    remove: '−'
+    remove: '🗑'
   };
   const node = el('button', {
     className: 'icon-button',
@@ -451,12 +469,39 @@ function update(patch: Partial<InterviewData>): void {
   refreshDerivedViews();
 }
 
-function updateItem(index: number, patch: Partial<InterviewItem>): void {
+function updateItemDraft(
+  id: string,
+  patch: Partial<InterviewItem>,
+  status: HTMLElement,
+  saveButton: HTMLButtonElement
+): void {
+  const source = itemDrafts[id] || data.items.find((item) => item.id === id);
+
+  if (!source) {
+    return;
+  }
+
+  itemDrafts[id] = { ...source, ...patch };
+  itemSaveStatus[id] = 'Есть несохраненные изменения';
+  status.className = 'validation-note';
+  status.textContent = itemSaveStatus[id];
+  saveButton.disabled = false;
+}
+
+function saveItemDraft(id: string): void {
+  const draft = itemDrafts[id];
+
+  if (!draft) {
+    return;
+  }
+
   data = {
     ...data,
-    items: data.items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item))
+    items: data.items.map((item) => (item.id === id ? draft : item))
   };
-  refreshDerivedViews();
+  delete itemDrafts[id];
+  itemSaveStatus[id] = 'Сохранено';
+  renderApp();
 }
 
 function moveItem(index: number, direction: -1 | 1): void {
@@ -469,6 +514,13 @@ function moveItem(index: number, direction: -1 | 1): void {
 }
 
 function removeItem(index: number): void {
+  const [removed] = data.items.slice(index, index + 1);
+
+  if (removed) {
+    delete itemDrafts[removed.id];
+    delete itemSaveStatus[removed.id];
+  }
+
   data = {
     ...data,
     items: data.items.filter((_, itemIndex) => itemIndex !== index)
