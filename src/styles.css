@@ -79,6 +79,37 @@ textarea {
   padding: 20px;
 }
 
+.advanced-panel {
+  padding: 0;
+}
+
+.advanced-panel summary {
+  padding: 16px 20px;
+  cursor: pointer;
+  color: #3c434a;
+  font-weight: 700;
+}
+
+.advanced-panel[open] summary {
+  border-bottom: 1px solid #d8dde3;
+}
+
+.advanced-panel .field,
+.advanced-help {
+  margin: 16px 20px;
+}
+
+.advanced-help {
+  display: grid;
+  gap: 8px;
+  color: #687076;
+  font-size: 13px;
+}
+
+.advanced-help p {
+  margin: 0;
+}
+
 .preview-panel {
   position: sticky;
   top: 24px;

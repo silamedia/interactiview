@@ -71,6 +71,13 @@ export function renderWidget(container: HTMLElement, rawData: InterviewData, _op
         alt: ''
       }
     });
+    poster.addEventListener('error', () => {
+      poster.remove();
+
+      if (data.items[0]) {
+        cueInitialVideo(data.items[0]);
+      }
+    });
     media.append(poster);
   }
 

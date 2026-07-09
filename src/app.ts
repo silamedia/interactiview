@@ -45,7 +45,7 @@ function renderApp(): void {
 
   const grid = el('div', { className: 'builder-grid' });
   const editor = el('section', { className: 'editor-panel' });
-  editor.append(renderCommonFields(), renderQuestions(), renderEmbedCode());
+  editor.append(renderCommonFields(), renderAdvancedFields(), renderQuestions(), renderEmbedCode());
 
   const preview = el('section', { className: 'preview-panel' });
   preview.append(el('h2', { text: 'Предпросмотр' }));
@@ -62,16 +62,38 @@ function renderApp(): void {
 function renderCommonFields(): HTMLElement {
   const section = panel('Общее');
   const title = input(data.title, 'Заголовок', (value) => update({ title: value }));
-  const poster = input(data.poster, 'URL обложки', (value) => update({ poster: value }));
   const description = textarea(data.description, 'Лид / описание', (value) =>
     update({ description: value })
   );
 
   section.append(
     field('Заголовок', title, 'Показывается над интерактивью. Можно оставить пустым.'),
-    field('URL обложки', poster, 'Если не указать, до клика будет показано первое видео.'),
     field('Лид / описание', description, 'Короткое объяснение для читателя. Можно оставить пустым.'),
     renderLayoutChoice()
+  );
+
+  return section;
+}
+
+function renderAdvancedFields(): HTMLElement {
+  const section = el('details', { className: 'panel advanced-panel' });
+  const poster = input(data.poster, 'https://example.com/cover.jpg', (value) => update({ poster: value }));
+  const notes = el('div', { className: 'advanced-help' });
+
+  notes.append(
+    el('p', { text: 'Вставьте прямую ссылку на изображение. Обычно такая ссылка заканчивается на .jpg, .jpeg, .png или .webp.' }),
+    el('p', { text: 'Ссылка на страницу с картинкой может не сработать. Например, обычная ссылка из Google Drive, соцсетей или облачного диска часто ведет на страницу просмотра, а не на сам файл изображения.' }),
+    el('p', { text: 'Если сомневаетесь, оставьте поле пустым.' })
+  );
+
+  section.append(
+    el('summary', { text: 'Дополнительно' }),
+    field(
+      'Ссылка на обложку',
+      poster,
+      'Необязательно. Если оставить пустым, до выбора вопроса будет показано первое видео.'
+    ),
+    notes
   );
 
   return section;
