@@ -6,6 +6,7 @@ import {
   InterviewItem,
   InterviewLayout,
   defaultInterview,
+  decodeInterview,
   encodeInterview,
   formatTimestamp,
   normalizeInterview,
@@ -20,7 +21,11 @@ if (!app) {
 }
 
 const appRoot = app;
+type AppMode = 'create' | 'edit';
+
 let data: InterviewData = structuredClone(defaultInterview);
+let mode: AppMode = 'create';
+let importStatus = '';
 let previewMount: HTMLElement | null = null;
 let embedOutput: HTMLTextAreaElement | null = null;
 let embedStatus: HTMLElement | null = null;
@@ -43,6 +48,12 @@ function renderApp(): void {
     el('p', { text: 'Русская версия конструктора embed-интервью из фрагментов YouTube.' })
   );
 
+  shell.append(header, renderModeTabs());
+
+  if (mode === 'edit') {
+    shell.append(renderImportPanel());
+  }
+
   const grid = el('div', { className: 'builder-grid' });
   const editor = el('section', { className: 'editor-panel' });
   editor.append(renderCommonFields(), renderAdvancedFields(), renderQuestions(), renderEmbedCode());
@@ -55,8 +66,69 @@ function renderApp(): void {
   renderWidget(previewMount, data, { assetBaseUrl: './' });
 
   grid.append(editor, preview);
-  shell.append(header, grid);
+  shell.append(grid);
   appRoot.append(shell);
+}
+
+function renderModeTabs(): HTMLElement {
+  const tabs = el('div', { className: 'mode-tabs' });
+
+  tabs.append(
+    modeTab('Создать интерактивью', 'create'),
+    modeTab('Отредактировать существующее', 'edit')
+  );
+
+  return tabs;
+}
+
+function modeTab(label: string, nextMode: AppMode): HTMLButtonElement {
+  const tab = el('button', {
+    className: nextMode === mode ? 'mode-tab mode-tab--active' : 'mode-tab',
+    text: label
+  });
+  tab.type = 'button';
+  tab.addEventListener('click', () => {
+    mode = nextMode;
+    importStatus = '';
+    renderApp();
+  });
+  return tab;
+}
+
+function renderImportPanel(): HTMLElement {
+  const section = panel('Отредактировать существующее');
+  const importField = textarea('', 'Вставьте сюда embed-код Interactiview, который уже стоит на сайте.', () => undefined);
+  const status = el('p', {
+    className: importStatus.startsWith('Готово') ? 'validation-note validation-note--ok' : 'validation-note',
+    text: importStatus || 'Мы откроем данные в редакторе ниже. После правок скопируйте новый embed-код и замените старый на сайте.'
+  });
+  const actions = el('div', { className: 'row-actions' });
+  const openButton = button('Открыть в редакторе', 'primary', () => {
+    const parsed = parseEmbedCode(importField.value);
+
+    if (!parsed) {
+      importStatus = 'Не удалось найти данные Interactiview. Проверьте, что вставлен полный embed-код.';
+      renderApp();
+      return;
+    }
+
+    data = withStableIds(parsed);
+    importStatus = 'Готово: интерактивью открыто в редакторе ниже.';
+    renderApp();
+  });
+
+  actions.append(openButton);
+  section.append(
+    field(
+      'Embed-код',
+      importField,
+      'Скопируйте код из материала или CMS. Мы ничего никуда не отправляем: код разбирается прямо в браузере.'
+    ),
+    actions,
+    status
+  );
+
+  return section;
 }
 
 function renderCommonFields(): HTMLElement {
@@ -348,6 +420,30 @@ function iconButton(label: string, icon: string, onClick: () => void, disabled: 
   node.disabled = disabled;
   node.addEventListener('click', onClick);
   return node;
+}
+
+function parseEmbedCode(rawCode: string): InterviewData | null {
+  const trimmed = rawCode.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = new DOMParser().parseFromString(trimmed, 'text/html');
+  const container = parsed.querySelector<HTMLElement>('.sila-fragment-interview[data-interview]');
+  const encoded = container?.dataset.interview;
+
+  return decodeInterview(encoded || trimmed);
+}
+
+function withStableIds(interview: InterviewData): InterviewData {
+  return {
+    ...interview,
+    items: interview.items.map((item) => ({
+      ...item,
+      id: item.id || crypto.randomUUID()
+    }))
+  };
 }
 
 function update(patch: Partial<InterviewData>): void {
