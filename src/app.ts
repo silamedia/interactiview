@@ -221,7 +221,7 @@ function buildEmbedCode(interview: InterviewData): string {
   const encoded = encodeInterview(interview);
 
   return `<div class="sila-fragment-interview" data-interview="${encoded}"></div>
-<script async src="https://your-domain.example/sila-fragment-interview.js"></script>`;
+<script async src="https://silamedia.github.io/interactiview/sila-fragment-interview.js"></script>`;
 }
 
 function panel(title: string): HTMLElement {
